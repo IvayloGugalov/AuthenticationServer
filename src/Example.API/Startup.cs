@@ -1,3 +1,4 @@
+using System;
 using System.Text;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -39,7 +40,8 @@ namespace Example.API
                         ValidAudience = authConfiguration.Audience,
                         ValidateIssuerSigningKey = true,
                         ValidateIssuer = true,
-                        ValidateAudience = true
+                        ValidateAudience = true,
+                        ClockSkew = TimeSpan.Zero
                     };
                 });
         }
@@ -69,7 +71,7 @@ namespace Example.API
         private class AuthConfiguration
         {
             public string AccessTokenSecretKey { get; set; }
-            public int AccessTokenExpirationMinutes { get; set; }
+            public double AccessTokenExpirationMinutes { get; set; }
             public string Issuer { get; set; }
             public string Audience { get; set; }
         }

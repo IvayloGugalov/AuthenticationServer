@@ -3,6 +3,7 @@ namespace AuthenticationServer.API.Models.Responses
 {
     public class UserAuthenticatedResponse
     {
-        public string AccessToken { get; set; }
+        public string AccessTokenValue { get; set; }
+        public string RefreshTokenValue { get; set; }
     }
 }
