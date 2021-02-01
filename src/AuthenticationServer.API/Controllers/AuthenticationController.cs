@@ -1,29 +1,35 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 using AuthenticationServer.API.Helpers;
 using AuthenticationServer.API.Models;
-using AuthenticationServer.API.Models.Request;
-using AuthenticationServer.API.Services.Repositories;
 using AuthenticationServer.API.Models.Responses;
-using AuthenticationServer.API.Services.TokenGenerators;
+using AuthenticationServer.API.Models.Request;
+using AuthenticationServer.API.Services.Authenticators;
+using AuthenticationServer.API.Services.Repositories;
+using AuthenticationServer.API.Services.TokenValidators;
 
 namespace AuthenticationServer.API.Controllers
 {
     public class AuthenticationController : Controller
     {
         private readonly IUserRepository userRepository;
-        private readonly AccessTokenGenerator accessTokenGenerator;
+        private readonly IRefreshTokenRepository refreshTokenRepository;
+        private readonly RefreshTokenValidator refreshTokenValidator;
+        private readonly Authenticator authenticator;
 
-        public AuthenticationController(IUserRepository userRepository, AccessTokenGenerator accessTokenGenerator)
+        public AuthenticationController(IUserRepository userRepository, RefreshTokenValidator refreshTokenValidator, IRefreshTokenRepository refreshTokenRepository, Authenticator authenticator)
         {
             this.userRepository = userRepository;
-            this.accessTokenGenerator = accessTokenGenerator;
+            this.refreshTokenValidator = refreshTokenValidator;
+            this.refreshTokenRepository = refreshTokenRepository;
+            this.authenticator = authenticator;
         }
 
         [HttpPost("register")]
@@ -84,12 +90,55 @@ namespace AuthenticationServer.API.Controllers
                 return Unauthorized(new ErrorResponse("Password is incorrect."));
             }
 
-            var accessToken = this.accessTokenGenerator.GenerateToken(user);
+            var response = await this.authenticator.AuthenticateUserAsync(user);
+            return Ok(response);
+        }
 
-            return Ok(new UserAuthenticatedResponse()
+        [HttpPost("refresh")]
+        public async Task<IActionResult> Refresh([FromBody] RefreshRequest refreshRequest)
+        {
+            if (!this.ModelState.IsValid)
             {
-                AccessToken = accessToken
-            });
+                return this.BadRequestModelState();
+            }
+
+            if (!this.refreshTokenValidator.Validate(refreshRequest.RefreshTokenValue))
+            {
+                return this.BadRequest(new ErrorResponse("Invalid refresh token"));
+            }
+
+            var refreshToken = await this.refreshTokenRepository.GetByTokenValue(refreshRequest.RefreshTokenValue);
+            if (refreshToken is null)
+            {
+                return NotFound(new ErrorResponse("Invalid refresh token"));
+            }
+
+            await this.refreshTokenRepository.Delete(refreshToken.Id);
+
+            var user = await this.userRepository.GetById(refreshToken.UserId);
+            if (user is null)
+            {
+                return NotFound(new ErrorResponse("User not found"));
+            }
+
+            var response = await this.authenticator.AuthenticateUserAsync(user);
+            return Ok(response);
+        }
+
+        [Authorize]
+        [HttpDelete("logout")]
+        public async Task<IActionResult> Logout()
+        {
+            var unparsedUserId = HttpContext.User.FindFirstValue("id");
+
+            if (!Guid.TryParse(unparsedUserId, out var userId))
+            {
+                return Unauthorized();
+            }
+
+            await this.refreshTokenRepository.DeleteAll(userId);
+
+            return NoContent();
         }
 
         private IActionResult BadRequestModelState()

@@ -1,3 +1,4 @@
+using System;
 using System.Text;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -39,7 +40,8 @@ namespace Example.API
                         ValidAudience = authConfiguration.Audience,
                         ValidateIssuerSigningKey = true,
                         ValidateIssuer = true,
-                        ValidateAudience = true
+                        ValidateAudience = true,
+                        ClockSkew = TimeSpan.Zero
                     };
                 });
         }

@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IdentityModel.Tokens.Jwt;
+﻿using System.Collections.Generic;
+using System.Security;
 using System.Security.Claims;
-using System.Text;
-
-using Microsoft.IdentityModel.Tokens;
 
 using AuthenticationServer.API.Models;
 
@@ -13,13 +9,15 @@ namespace AuthenticationServer.API.Services.TokenGenerators
     public class AccessTokenGenerator
     {
         private readonly AuthConfiguration authConfiguration;
+        private readonly TokenGenerator tokenGenerator;
 
-        public AccessTokenGenerator(AuthConfiguration authConfiguration)
+        public AccessTokenGenerator(AuthConfiguration authConfiguration, TokenGenerator tokenGenerator)
         {
-            this.authConfiguration = authConfiguration; 
+            this.authConfiguration = authConfiguration;
+            this.tokenGenerator = tokenGenerator;
         }
 
-        public string GenerateToken(User user)
+        public string GenerateAccessToken(User user)
         {
             var claims = new List<Claim>()
             {
@@ -28,19 +26,12 @@ namespace AuthenticationServer.API.Services.TokenGenerators
                 new Claim(ClaimTypes.Name, user.Username)
             };
 
-            var key = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(this.authConfiguration.AccessTokenSecretKey));
-            var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-            var token = new JwtSecurityToken(
-                this.authConfiguration.Issuer,
-                this.authConfiguration.Audience,
-                claims,
-                DateTime.UtcNow,
-                DateTime.UtcNow.AddMinutes(this.authConfiguration.AccessTokenExpirationMinutes),
-                credentials);
-
-            return new JwtSecurityTokenHandler().WriteToken(token);
+            return this.tokenGenerator.GenerateToken(
+                secretKey: this.authConfiguration.AccessTokenSecretKey,
+                issuer: this.authConfiguration.Issuer,
+                audience: this.authConfiguration.Audience,
+                tokenExpirationMinutes: this.authConfiguration.AccessTokenExpirationMinutes,
+                claims: claims);
         }
     }
 }
