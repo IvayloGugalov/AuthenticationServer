@@ -23,14 +23,14 @@ namespace AuthenticationServer.API.Services.Repositories
 
         public Task Delete(Guid id)
         {
-            this.refreshTokens.RemoveAll(rf => rf.Id == id);
+            this.refreshTokens.RemoveAll(rt => rt.Id == id);
 
             return Task.CompletedTask;
         }
 
         public Task DeleteAll(Guid userId)
         {
-            this.refreshTokens.RemoveAll(rf => rf.UserId == userId);
+            this.refreshTokens.RemoveAll(rt => rt.UserId == userId);
 
             return Task.CompletedTask;
         }

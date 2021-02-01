@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 using Microsoft.AspNetCore.Authorization;
@@ -13,7 +14,6 @@ using AuthenticationServer.API.Models.Request;
 using AuthenticationServer.API.Services.Authenticators;
 using AuthenticationServer.API.Services.Repositories;
 using AuthenticationServer.API.Services.TokenValidators;
-using System.Security.Claims;
 
 namespace AuthenticationServer.API.Controllers
 {
